@@ -28,48 +28,94 @@ contract TestHideAndSeek {
     Assert.notEqual(occupier, address(0), "It should have player in correct room");
   }
 
-  // function testARoomCantBeDoubleBooked() public {
-  //   bool hideAgain = hideAndSeek.hideInRoom.value(20 finney)(0);
-  //   Assert.isFalse(hideAgain, "Can't hide in occupied room");
-  // }
-
   function testItFinishesGameOnceHouseIsFull() public {
-    hideAndSeek.hideInRoom.value(20 finney)(1);
-    hideAndSeek.hideInRoom.value(20 finney)(2);
-    hideAndSeek.hideInRoom.value(20 finney)(3);
-    hideAndSeek.hideInRoom.value(20 finney)(4);
-    hideAndSeek.hideInRoom.value(20 finney)(5);
-    hideAndSeek.hideInRoom.value(20 finney)(6);
-    hideAndSeek.hideInRoom.value(20 finney)(7);
+    uint expectedBalance = initialBalance - 20 finney;
+    for (uint i = 1; i < 8; i++) {
+      hideAndSeek.hideInRoom.value(20 finney)(i);
+      expectedBalance -= 20 finney;
+    }
     uint[] memory numEmptyRooms = hideAndSeek.getEmptyRoomIds();
     Assert.equal(numEmptyRooms.length, 8, "It has 8 empty rooms after game over");
+    uint winnings = (8 * (20 finney)) - ((8 * (20 finney)) / 10);
+    expectedBalance += winnings;
+    Assert.equal(address(this).balance, expectedBalance, "It gives a player winnings");
   }
 
-  function testItGivesOutSeekTokenCorrectly() public {
-    uint seekAmount = hideAndSeek.balanceOf(address(this));
-    Assert.equal(seekAmount, 8, "It gives away the right amount of SEEK");
-    uint totalSupply = hideAndSeek.totalSupply();
-    Assert.equal(totalSupply, 8, "It changes the totalSupply of SEEK");
-    uint price = hideAndSeek.getSeekTokenPrice();
-    Assert.equal(price, 1 finney, "It updates the price of SEEK correctly");
-  }
+  // function testItGivesOutSeekTokenCorrectly() public {
+  //   uint seekAmount = hideAndSeek.balanceOf(address(this));
+  //   uint SZABO = 1 szabo;
+  //   Assert.equal(seekAmount, (8 * 2 * SZABO), "It gives away the right amount of SEEK");
+  //   uint totalSupply = hideAndSeek.totalSupply();
+  //   Assert.equal(totalSupply, (8 * 2 * SZABO), "It changes the totalSupply of SEEK");
+  //   uint price = hideAndSeek.getSeekTokenPrice();
+  //   Assert.equal(price, 500, "It updates the price of SEEK correctly");
+  // }
 
-  function testTheNextRoundCorrectlyUpdatesTokenPrice() public {
-    hideAndSeek.hideInRoom.value(20 finney)(0);
-    hideAndSeek.hideInRoom.value(20 finney)(1);
-    hideAndSeek.hideInRoom.value(20 finney)(2);
-    hideAndSeek.hideInRoom.value(20 finney)(3);
-    hideAndSeek.hideInRoom.value(20 finney)(4);
-    hideAndSeek.hideInRoom.value(20 finney)(5);
-    hideAndSeek.hideInRoom.value(20 finney)(6);
-    hideAndSeek.hideInRoom.value(20 finney)(7);
-    uint price = hideAndSeek.getSeekTokenPrice();
-    Assert.equal(price, 1 finney, "It updates the price of SEEK correctly");
-    uint seekAmount = hideAndSeek.balanceOf(address(this));
-    Assert.equal(seekAmount, 0, "It gives away the right amount of SEEK");
-    uint totalSupply = hideAndSeek.totalSupply();
-    Assert.equal(totalSupply, 0, "It changes the totalSupply of SEEK");
-  }
+  // // function testTheNextRoundCorrectlyUpdatesTokenPrice() public {
+  // //   for (uint i = 0; i < 8; i++) {
+  // //     hideAndSeek.hideInRoom.value(20 finney)(i);
+  // //   }
+  // //   uint seekAmount = hideAndSeek.balanceOf(address(this));
+  // //   uint SZABO = 1 szabo;
+  // //   Assert.equal(seekAmount, (((8 * 1) + (8 * 2)) * SZABO), "It gives away the right amount of SEEK");
+  // //   uint price = hideAndSeek.getSeekTokenPrice();
+  // //   Assert.equal(price, 666, "It updates the price of SEEK correctly");
+  // // }
+
+  // // function testTheItCorrectlyUpdatesTokenPricesAfterMoreRounds() public {
+  // //   for (uint round = 0; round < 3; round++) {
+  // //     for (uint i = 0; i < 8; i++) {
+  // //       hideAndSeek.hideInRoom.value(20 finney)(i);
+  // //     }
+  // //   }
+  // //   uint price = hideAndSeek.getSeekTokenPrice();
+  // //   Assert.equal(price, 1666, "It updates the price of SEEK correctly");
+  // // }
+
+  // // function testTheUserCanCashOut() public {
+  // //   uint balance = address(this).balance;
+  // //   uint startPrice = hideAndSeek.getSeekTokenPrice();
+  // //   uint amount = 23 szabo;
+  // //   uint totalSupplyStart = hideAndSeek.totalSupply();
+  // //   uint seekAmountStart = hideAndSeek.balanceOf(address(this));
+
+  // //   hideAndSeek.cashInSeekForEth(amount);
+
+  // //   uint seekAmountAfter = hideAndSeek.balanceOf(address(this));
+  // //   uint gained = address(this).balance - balance;
+  // //   uint totalSupplyAfter = hideAndSeek.totalSupply(); 
+      
+  // //   Assert.equal(gained, startPrice * amount, "It gives user eth correctly");
+  // //   Assert.equal((totalSupplyStart - totalSupplyAfter), amount, "Total supply reduces");
+  // //   Assert.equal((seekAmountStart - seekAmountAfter), amount, "User supply reduces");
+  // //   Assert.equal(hideAndSeek.balanceOf(address(this)), 1 szabo, "Correct seek amount after");
+  // //   Assert.equal(hideAndSeek.getSeekTokenPrice(), startPrice, "Correct seek/eth price after");
+
+
+  // //   hideAndSeek.cashInSeekForEth(oneForth);
+  // //   hideAndSeek.cashInSeekForEth(oneForth);
+  // //   hideAndSeek.cashInSeekForEth(oneForth);
+
+  // //   hideAndSeek.cashInSeekForEth(seekAmountAfter / 4);
+  // //   hideAndSeek.cashInSeekForEth(seekAmountAfter / 4);
+  // //   // hideAndSeek.cashInSeekForEth(hideAndSeek.balanceOf(address(this)));
+
+  // //   Assert.equal(hideAndSeek.balanceOf(address(this)), 0, "Correct seek amount after");
+  // //   Assert.equal(hideAndSeek.totalSupply(), 0, "No more tokens");
+  // //   Assert.equal(hideAndSeek.getShareHoldings(), 0, "The shareholdings are all used up");
+  // // }
+
+  // function testItContinuesAfterCashoutCorrectly() public {
+  //   for (uint i = 0; i < 8; i++) {
+  //     hideAndSeek.hideInRoom.value(20 finney)(i);
+  //   }
+  //   uint seekAmount = hideAndSeek.balanceOf(address(this));
+  //   uint SZABO = 1 szabo;
+  //   Assert.equal(seekAmount, (((8 * 1) + (8 * 2)) * SZABO), "It gives away the right amount of SEEK");
+  //   uint price = hideAndSeek.getSeekTokenPrice();
+  //   Assert.equal(price, 666, "It updates the price of SEEK correctly");
+  // }
+
 
   function() external payable { }
 

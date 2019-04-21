@@ -8,7 +8,9 @@ contract HideAndSeek {
 
   address owner;
   uint public NUM_ROOMS = 8;
-  uint public PRICE_TO_PLAY = 20 finney;
+  uint public PRICE_PER_PLAY = 20 finney; // 20,000 szabo
+  uint DIVIDEND_PERCENTAGE = 5;
+  uint SHARE_PERCENTAGE = 2;
 
   uint numRoomsOccupied = 0;
   uint shareHoldings = 0;
@@ -34,7 +36,7 @@ contract HideAndSeek {
   }
 
   function setPriceToPlay(uint priceToPlay) public onlyByOwner {
-    PRICE_TO_PLAY = priceToPlay;
+    PRICE_PER_PLAY = priceToPlay;
   }
 
   function getEmptyRoomIds() public view returns (uint[] memory) {
@@ -54,7 +56,7 @@ contract HideAndSeek {
   }
 
   function hideInRoom(uint roomId) public payable {
-    require(msg.value >= PRICE_TO_PLAY);
+    require(msg.value >= PRICE_PER_PLAY);
     require(roomId < NUM_ROOMS);
     require(rooms[roomId] == address(0));
     rooms[roomId] = msg.sender;
@@ -82,10 +84,10 @@ contract HideAndSeek {
   function rewardWinner() internal {
     uint rnd = random(NUM_ROOMS);
     address payable winner = rooms[rnd];
-    uint totalFromRound = NUM_ROOMS.mul(PRICE_TO_PLAY);
+    uint totalFromRound = NUM_ROOMS.mul(PRICE_PER_PLAY);
 
-    uint devTakings = totalFromRound.div(100).mul(5);   // 5 percent for dev
-    uint shareTakings = totalFromRound.div(100).mul(5); // 5 percent for shares
+    uint devTakings = getPercentageOfValue(5, totalFromRound);
+    uint shareTakings = getPercentageOfValue(5, totalFromRound);
     shareHoldings = shareHoldings.add(shareTakings);
     devHoldings = devTakings.add(devTakings);
 
@@ -108,37 +110,48 @@ contract HideAndSeek {
     numRoomsOccupied = 0;
   }
 
+  function getShareHoldings() public view returns (uint) {
+    return shareHoldings;
+  }
+
   /*
   ** SEEK Calculations
   */
 
-  function getSeekTokenPrice() public view returns (uint price) {
+  function getPercentageOfValue(uint percent, uint value) internal pure returns (uint) {
+    return value.mul(percent).div(100);
+  }
+
+  /*
+  * The price of SEEK in ETH
+  */
+  function getSeekTokenPrice() public view returns (uint) {
     if (shareHoldings == 0 || totalSupplySeek == 0) {
       return 0;
     }
     return shareHoldings.div(totalSupplySeek);
   }
 
-  function getSeekAllocation() public view returns (uint allocation) {
-    uint seekPrice = getSeekTokenPrice(); // 1 percent of the going price
-    if (seekPrice == 0) { // if no holdings or seek tokens
-      return 1;
-    }
-    return seekPrice.div(100);
+  /*
+  * The seek token allocation is equivalent 1 / (shareHoldings)
+  */
+  function getSeekAllocation() public view returns (uint) {
+    return (PRICE_PER_PLAY.div(shareHoldings)).mul(1 szabo);
   }
 
   function cashInSeekForEth(uint amount) public payable {
     require(balanceOf(msg.sender) >= amount);
     uint seekPrice = getSeekTokenPrice();
+    uint ethAmount = seekPrice.mul(amount);
     totalSupplySeek -= amount;
     seekBalances[msg.sender] -= amount;
-    msg.sender.transfer(seekPrice.mul(amount));
+    msg.sender.transfer(ethAmount);
   }
 
 
   /*
   **
-  ** SEEK TOKEN INTERFACE: ERC20 COMPLIANT
+  ** SEEK TOKEN INTERFACE: ERC20 COMPLIANT (Uses Proof-of-Hiding algorhythm)
   **
   */
   // Public variables
@@ -154,23 +167,23 @@ contract HideAndSeek {
   function totalSupply() public view returns (uint) {
     return totalSupplySeek;
   }
-  function balanceOf(address tokenOwner) public view returns (uint balance) {
+  function balanceOf(address tokenOwner) public view returns (uint) {
     return seekBalances[tokenOwner];
   }
-  function allowance(address tokenOwner, address spender) public view returns (uint remaining) {
+  function allowance(address tokenOwner, address spender) public view returns (uint) {
     return allowed[tokenOwner][spender];
   }
-  function transfer(address to, uint tokens) public returns (bool success) {
+  function transfer(address to, uint tokens) public returns (bool) {
     seekBalances[to] = seekBalances[to].add(tokens);
     emit Transfer(address(this), to, tokens);
     return true;
   }
-  function approve(address spender, uint tokens) public returns (bool success) {
+  function approve(address spender, uint tokens) public returns (bool) {
     allowed[msg.sender][spender] = tokens;
     emit Approval(msg.sender, spender, tokens);
     return true;
   }
-  function transferFrom(address from, address to, uint tokens) public returns (bool success) {
+  function transferFrom(address from, address to, uint tokens) public returns (bool) {
     seekBalances[from] = seekBalances[from].sub(tokens);
     allowed[from][msg.sender] = allowed[from][msg.sender].sub(tokens);
     seekBalances[to] = seekBalances[to].add(tokens);
