@@ -2,14 +2,27 @@ import React, { Component } from "react"
 import HideAndSeekContract from "./contracts/HideAndSeek.json"
 import getWeb3 from "./utils/getWeb3"
 import SeekPriceChart from "./components/SeekPriceChart"
-
-import "./App.css"
 import RoomSelector from "./components/RoomSelector.jsx"
 
+const HIDE_PAGE = 0
+const SEEK_PAGE = 1
+
 class App extends Component {
-  state = { seekPrice: null, web3: null, accounts: null, contract: null }
+  state = {
+    seekPrice: null,
+    emptyRooms: [],
+    selectedRoom: null,
+    web3: null,
+    accounts: null,
+    contract: null,
+    currentPage: HIDE_PAGE
+  }
 
   componentDidMount = async () => {
+    this.connectToWeb3()
+  }
+
+  connectToWeb3 = async () => {
     try {
       // Get network provider and web3 instance.
       const web3 = await getWeb3()
@@ -41,20 +54,46 @@ class App extends Component {
   refresh = async () => {
     const { contract } = this.state
     const seekPrice = await contract.methods.getSeekTokenPrice().call()
-    console.log("Price Refresh", seekPrice)
-    this.setState({ seekPrice })
+    const emptyRooms = await contract.methods.getEmptyRoomIds().call()
+    console.log("seekPrice", seekPrice)
+    console.log("emptyRooms", emptyRooms)
+    this.setState({ seekPrice, emptyRooms })
+  }
+
+  hideInRoom = () => {
+    console.log("Hiding in room", this.state.selectedRoom)
   }
 
   render() {
+    const { emptyRooms, seekPrice, selectedRoom, currentPage } = this.state
     if (!this.state.web3) {
       return <div>Loading Web3, accounts, and contract...</div>
     }
-    return (
-      <div>
-        <SeekPriceChart price={this.state.seekPrice} />
-        <RoomSelector />
-      </div>
-    )
+    if (currentPage === HIDE_PAGE) {
+      return (
+        <div>
+          <RoomSelector
+            emptyRooms={emptyRooms}
+            selectedRoom={selectedRoom}
+            onSelect={id => {
+              if (id === selectedRoom) {
+                this.setState({ selectedRoom: null })
+              } else {
+                this.setState({ selectedRoom: id })
+              }
+            }}
+          />
+        </div>
+      )
+    } else {
+      return (
+        <div>
+          <h1>Landing page</h1>
+          This should be where the user comes first
+        </div>
+      )
+      //
+    }
   }
 }
 
